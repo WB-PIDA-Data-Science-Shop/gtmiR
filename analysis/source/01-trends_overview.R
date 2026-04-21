@@ -59,21 +59,44 @@ country_class <- cliaretl::wb_income_and_region
 # analysis ----------------------------------------------------------------
 # Explore the evolution of the GTMI groups over time using change in group viz
 
-# Compute differences for all indicators across both periods
+# Compute differences for all indicators (2020 → 2025 only)
 indicators <- c("gtmi", "cgsi", "psdi", "dcei", "gtei")
 
-periods    <- list(c(2020, 2022), c(2022, 2025), c(2020, 2025))
-
 gtmi_diffs <- purrr::map_dfr(indicators, function(ind) {
-  purrr::map_dfr(periods, function(p) {
-    compute_gtmi_diff(groups_data, ind, p[1], p[2])
-  })
+  compute_gtmi_diff(groups_data, ind, 2020, 2025)
 })
 
 # left join with country classification to get income group and region for plotting
 gtmi_diffs <- gtmi_diffs |>
-  left_join(country_class |> select(country_code, income_group, region), by = "country_code")
+  left_join(country_class |> select(country_code, income_group, region), by = "country_code") |>
+  select(-grp)
 
+#Prepare facet groups:
+gtmi_classified <- gtmi_diffs |>
+  classify_gtmi_group(2020) |>
+  classify_gtmi_group(2025)
+
+# All indicators at once — returns a named list of plots
+plots <- plot_gtmi_time_trends(
+  gtmi_classified,
+  indicator = c("gtmi", "cgsi", "psdi", "dcei", "gtei"),
+  grouping = "income_group",
+  group_order = c("High income", "Upper middle income", "Lower middle income", "Low income")
+)
+
+# Save all plots
+output_dir <- here::here("analysis", "figs", "diffs")
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+purrr::iwalk(plots, ~ggsave(file.path(output_dir, paste0(.y, ".png")), .x))
+
+
+
+
+
+
+
+
+# legacy-by-country ------------------------------------------------------
 
 # Create plots and save to output directory for all indicator/period/grouping combinations
 
@@ -83,9 +106,12 @@ plot_specs <- tidyr::expand_grid(
   to_year     = c(2022, 2025),
   grouping    = c("grp", "income_group", "region")
 ) |>
-  filter(from_year < to_year)
+  filter(from_year < to_year) 
 
-output_dir <- here::here("analysis", "figs")
+
+
+
+output_dir <- here::here("analysis", "figs", "year-to-year-changes")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 purrr::pwalk(plot_specs, function(indicator, from_year, to_year, grouping) {
@@ -102,7 +128,7 @@ purrr::pwalk(plot_specs, function(indicator, from_year, to_year, grouping) {
   ggsave(filename, plot = p)
 })
 
-# Dumbells for GTMI change by country, facetted by grouping tier
+# End of code
 
 
 
