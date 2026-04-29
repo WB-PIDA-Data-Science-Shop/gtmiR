@@ -1,2 +1,7 @@
+^renv$
+^renv\.lock$
 ^gtmiR\.Rproj$
 ^\.Rproj\.user$
+^LICENSE\.md$
+^analysis$
+^raw-data$
