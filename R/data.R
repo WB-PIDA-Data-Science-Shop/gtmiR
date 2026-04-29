@@ -40,3 +40,41 @@
 #' Non-numeric placeholder values (e.g. \code{".."}) were coerced to \code{NA}.
 #'
 "gtmi2025"
+
+#' GovTech Information Management Systems (IMS) Adoption Dataset
+#'
+#' A dataset containing indicators of Information Management System (IMS) adoption
+#' across countries for 2025. The data comes from the World Bank's GovTech GTMI
+#' (Government Technology Maturity Index) survey and captures the presence of
+#' key public financial management and government service delivery systems.
+#'
+#' @format A tibble with 241 rows and 9 columns:
+#' \describe{
+#'   \item{country_code}{ISO 3-letter country code}
+#'   \item{country_name}{Country name}
+#'   \item{FMIS}{Financial Management Information System - Operational FMIS in place to support core PFM functions}
+#'   \item{TMIS}{Tax Management Information System - Tax management system in place}
+#'   \item{CMIS}{Customs Management Information System - Customs management system in place}
+#'   \item{EPMIS}{E-Procurement Management Information System - E-Procurement portal in place}
+#'   \item{DMIS}{Debt Management Information System - Debt Management System (DMS) in place}
+#'   \item{PIMIS}{Public Investment Management Information System - Public Investment Management System (PIMS) in place}
+#'   \item{year}{Year of data collection (2025)}
+#' }
+#'
+#' @details
+#' Each IMS indicator captures the presence (1) or absence (0) of a specific system:
+#' - FMIS: Operational Financial Management Information System supporting core PFM functions
+#' - TMIS: Tax Management Information System
+#' - CMIS: Customs Management Information System
+#' - EPMIS: E-Procurement portal
+#' - DMIS: Debt Management System
+#' - PIMIS: Public Investment Management System
+#'
+#' Note: TSA (Treasury Single Account) indicator (wb_gtmi_i_6) was excluded from this dataset.
+#'
+#' @source World Bank Development Data Hub - GovTech Dataset
+#' \url{https://datacatalog.worldbank.org/int/search/dataset/0037889/govtech-dataset}
+#'
+#' }
+#'
+"ims_adoption"

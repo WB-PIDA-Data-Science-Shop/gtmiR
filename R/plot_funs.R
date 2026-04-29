@@ -280,3 +280,137 @@ plot_gtmi_time_trends <- function(
 
   .make_plot(indicator, ttl = title)
 }
+
+
+#' Scatter plot of a GTMI index vs outcome variables, faceted by outcome
+#'
+#' Creates a scatter plot with points colored by a grouping variable and sized
+#' by \code{adoption_status}. Overlays a single dashed linear regression line
+#' across all points. Labels the top 5 and bottom 5 countries by
+#' \code{outcome_value} within each facet. Optionally saves the plot to disk.
+#'
+#' @param data A data frame in \code{corr_data_long} format. Must contain columns
+#'   \code{outcome}, \code{outcome_value}, \code{adoption_status}, \code{country_code},
+#'   and the column named by \code{x} and \code{group}.
+#' @param x A string naming the GTMI index column to plot on the x-axis.
+#'   One of \code{"gtmi"}, \code{"cgsi"}, \code{"psdi"}, \code{"dcei"}, \code{"gtei"}.
+#' @param group A string naming the grouping column for point color. One of
+#'   \code{"ims_type"}, \code{"grp"}, \code{"region"}.
+#' @param filename Optional string path to save the plot. If \code{NULL}, the plot
+#'   is not saved.
+#' @return A \code{ggplot} object.
+#' @export
+ggplot_corr_outcomes <- function(data, x, group, filename = NULL) {
+
+  # Identify top 5 and bottom 5 countries per outcome facet for labelling
+  outlier_labels <- data |>
+    dplyr::filter(!is.na(outcome_value), !is.na(.data[[x]])) |>
+    dplyr::group_by(outcome) |>
+    dplyr::slice(c(
+      order(outcome_value)[1:5],
+      order(outcome_value, decreasing = TRUE)[1:5]
+    )) |>
+    dplyr::ungroup() |>
+    dplyr::select(country_code, outcome, outcome_value)
+
+  plot_data <- data |>
+    dplyr::filter(!is.na(outcome_value), !is.na(.data[[x]])) |>
+    dplyr::left_join(
+      outlier_labels |> dplyr::mutate(.label = country_code),
+      by = c("country_code", "outcome", "outcome_value")
+    )
+
+  plot <- plot_data |>
+    ggplot2::ggplot(
+      ggplot2::aes(
+        x     = .data[[x]],
+        y     = outcome_value,
+        color = .data[[group]],
+        size  = as.numeric(adoption_status)
+      )
+    ) +
+    ggplot2::geom_point(alpha = 0.7) +
+    ggplot2::geom_smooth(
+      mapping   = ggplot2::aes(x = .data[[x]], y = outcome_value, group = 1),
+      method    = "lm",
+      formula   = y ~ x,
+      se        = FALSE,
+      color     = "grey30",
+      linetype  = "dashed",
+      linewidth = 0.8,
+      inherit.aes = FALSE
+    ) +
+    ggrepel::geom_text_repel(
+      ggplot2::aes(label = .label),
+      size     = 3,
+      na.rm    = TRUE,
+      max.overlaps = 15,
+      show.legend  = FALSE
+    ) +
+    ggplot2::scale_size_continuous(
+      name   = "Adoption status\n(0–12)",
+      range  = c(1, 6),
+      breaks = c(0, 4, 8, 12)
+    ) +
+    ggplot2::scale_color_brewer(palette = "Paired", name = group) +
+    ggplot2::scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
+    ggplot2::scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
+    ggplot2::facet_wrap(~outcome, scales = "free_y") +
+    ggplot2::labs(
+      x        = toupper(x),
+      y        = "Outcome value",
+      title    = glue::glue("GTMI {toupper(x)} vs governance & economic outcomes"),
+      subtitle = glue::glue("Colored by {group} | Point size = adoption status (0–12)"),
+      caption  = "Labels show top 5 and bottom 5 countries per outcome. Dashed line: overall linear fit."
+    ) +
+    ggplot2::theme(legend.position = "bottom")
+
+  if (!is.null(filename)) {
+    ggplot2::ggsave(
+      plot     = plot,
+      filename = filename,
+      width    = 16,
+      height   = 12,
+      dpi      = 300,
+      bg       = "white"
+    )
+  }
+
+  plot
+}
+
+
+#' Batch scatter plots for all GTMI indices vs outcomes
+#'
+#' Calls \code{\link{ggplot_corr_outcomes}} for every combination of GTMI index
+#' and grouping variable and optionally saves each plot.
+#'
+#' @param data A data frame in \code{corr_data_long} format.
+#' @param indices Character vector of GTMI index columns to iterate over.
+#'   Defaults to \code{c("gtmi", "cgsi", "psdi", "dcei", "gtei")}.
+#' @param groups Character vector of grouping columns to iterate over.
+#'   Defaults to \code{c("ims_type", "grp", "region")}.
+#' @param output_dir Optional directory path. When supplied, each plot is saved
+#'   as \code{<output_dir>/corr_<index>_<group>.png}.
+#' @return A named list of \code{ggplot} objects, named \code{<index>_<group>}.
+#' @export
+batch_corr_plots <- function(
+    data,
+    indices    = c("gtmi", "cgsi", "psdi", "dcei", "gtei"),
+    groups     = c("ims_type", "grp", "region"),
+    output_dir = NULL
+) {
+  combos <- tidyr::expand_grid(x = indices, group = groups)
+
+  plots <- purrr::pmap(combos, function(x, group) {
+    filename <- if (!is.null(output_dir)) {
+      file.path(output_dir, glue::glue("corr_{x}_{group}.png"))
+    } else {
+      NULL
+    }
+    ggplot_corr_outcomes(data, x = x, group = group, filename = filename)
+  })
+
+  names(plots) <- glue::glue("{combos$x}_{combos$group}")
+  plots
+}

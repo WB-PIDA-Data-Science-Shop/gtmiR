@@ -18,7 +18,7 @@ datasets <- list(
   list(
     url = "https://datacatalogfiles.worldbank.org/ddh-published/0037889/DR0045921/wbg_dgss-dataset_december2020.xlsx",
     sheet = "GTMI",
-    select = 16:25, # Select only the GTMI group columns
+    select = NULL, # Select only the GTMI group columns
     name = "govtech2020_raw"
   ),
   list(
