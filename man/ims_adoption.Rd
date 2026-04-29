@@ -21,8 +21,6 @@ A tibble with 241 rows and 9 columns:
 \source{
 World Bank Development Data Hub - GovTech Dataset
 \url{https://datacatalog.worldbank.org/int/search/dataset/0037889/govtech-dataset}
-
-}
 }
 \usage{
 ims_adoption

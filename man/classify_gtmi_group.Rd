@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_funs.R
 \name{classify_gtmi_group}
 \alias{classify_gtmi_group}
-\title{Classify GTMI indicator values into performance groups (A–D)}
+\title{Classify GTMI indicator values into performance groups (A to D)}
 \usage{
 classify_gtmi_group(
   data,

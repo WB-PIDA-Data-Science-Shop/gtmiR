@@ -75,6 +75,4 @@
 #' @source World Bank Development Data Hub - GovTech Dataset
 #' \url{https://datacatalog.worldbank.org/int/search/dataset/0037889/govtech-dataset}
 #'
-#' }
-#'
 "ims_adoption"

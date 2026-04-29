@@ -26,7 +26,7 @@ compute_gtmi_diff <- function(data, indicator, from_year, to_year) {
     arrange(desc(difference))
 }
 
-#' Classify GTMI indicator values into performance groups (A–D)
+#' Classify GTMI indicator values into performance groups (A to D)
 #'
 #' Applies the GTMI grouping tiers:
 #' A = Extensive (>=0.75), B = Significant (>=0.50), C = Medium (>=0.25), D = Low (<0.25).
@@ -348,7 +348,7 @@ ggplot_corr_outcomes <- function(data, x, group, filename = NULL) {
       show.legend  = FALSE
     ) +
     ggplot2::scale_size_continuous(
-      name   = "Adoption status\n(0–12)",
+      name   = "Adoption status\n(0 to 12)",
       range  = c(1, 6),
       breaks = c(0, 4, 8, 12)
     ) +
@@ -360,7 +360,7 @@ ggplot_corr_outcomes <- function(data, x, group, filename = NULL) {
       x        = toupper(x),
       y        = "Outcome value",
       title    = glue::glue("GTMI {toupper(x)} vs governance & economic outcomes"),
-      subtitle = glue::glue("Colored by {group} | Point size = adoption status (0–12)"),
+      subtitle = glue::glue("Colored by {group} | Point size = adoption status (0 to 12)"),
       caption  = "Labels show top 5 and bottom 5 countries per outcome. Dashed line: overall linear fit."
     ) +
     ggplot2::theme(legend.position = "bottom")
