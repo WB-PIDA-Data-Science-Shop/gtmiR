@@ -209,6 +209,90 @@ ggsave(
 
 
 
+# boxplot-analysis -------------------------------------------------------
+# One plot per indicator: x = year, y = score, boxes per region,
+# jitter = individual countries, facets = region, color = region
+
+# Pivot gtmi_panel to long format for boxplot
+boxplot_data <- gtmi_panel |>
+  filter(year %in% c(2020, 2022, 2025)) |>
+  pivot_longer(
+    cols      = c(gtmi, cgsi, psdi, dcei, gtei),
+    names_to  = "indicator",
+    values_to = "value"
+  ) |>
+  filter(!is.na(value), !is.na(region)) |>
+  left_join(indicator_labels |>
+              mutate(indicator = stringr::str_remove(indicator, "_avg")),
+            by = "indicator") |>
+  mutate(
+    year   = factor(year),
+    region = stringr::str_wrap(region, width = 20)
+  )
+
+region_colors <- scales::hue_pal()(length(unique(boxplot_data$region)))
+names(region_colors) <- unique(sort(boxplot_data$region))
+
+output_dir_box <- "analysis/figs/boxplot"
+dir.create(output_dir_box, recursive = TRUE, showWarnings = FALSE)
+
+purrr::walk(unique(boxplot_data$indicator), function(ind) {
+
+  plot_data  <- boxplot_data |> filter(indicator == ind)
+  ind_label  <- unique(plot_data$indicator_name)
+
+  # Regional average across all years — one hline per facet
+  region_avg <- plot_data |>
+    dplyr::group_by(region) |>
+    dplyr::summarise(region_mean = mean(value, na.rm = TRUE), .groups = "drop")
+
+  p <- ggplot(plot_data, aes(x = year, y = value, fill = region, color = region)) +
+    geom_hline(
+      data      = region_avg,
+      aes(yintercept = region_mean),
+      color     = "grey4",
+      linetype  = "dashed",
+      linewidth = 0.5
+    ) +
+    geom_boxplot(
+      width         = 0.3,
+      outlier.shape = NA,
+      alpha         = 0.5
+    ) +
+    geom_jitter(
+      aes(color = region),
+      size   = 1.5,
+      alpha  = 0.6,
+      width  = 0.2
+    ) +
+    scale_fill_brewer(palette  = "Dark2", name = "Region") +
+    scale_color_brewer(palette = "Dark2", name = "Region") +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+    facet_grid(~ region) +
+    labs(
+      title    = glue::glue("{ind_label}"),
+      subtitle = "Distribution of country scores by year and region",
+      x        = "Year",
+      y        = "Score (0–1)",
+      caption  = "Each point represents one country. Dashed line = region average (all years)."
+    ) +
+    theme(
+      legend.position = "none",
+      strip.text      = element_text(size = 9),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.border = element_blank()
+
+    )
+
+  ggplot2::ggsave(
+    filename = file.path(output_dir_box, glue::glue("boxplot_{ind}_region.png")),
+    plot     = p,
+    width    = 12, height = 6, dpi = 300, bg = "white"
+  )
+})
+
+
 
 
 

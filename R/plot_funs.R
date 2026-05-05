@@ -247,9 +247,9 @@ plot_gtmi_time_trends <- function(
         alpha      = 0.6,
         color      = "grey60"
       ) +
-      scale_color_manual(
-        values = c("#00274C", "#00B2A9", "#2F65A7", "#702082"),
-        name   = tools::toTitleCase(gsub("_", " ", grouping))
+      scale_color_brewer(
+        palette = "Dark2",
+        name    = tools::toTitleCase(gsub("_", " ", grouping))
       ) +
       scale_y_continuous(
         limits = y_limits,

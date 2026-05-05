@@ -59,11 +59,11 @@ country_class <- cliaretl::wb_income_and_region
 # analysis ----------------------------------------------------------------
 # Explore the evolution of the GTMI groups over time using change in group viz
 
-# Compute differences for all indicators (2020 → 2025 only)
+# Compute differences for all indicators (2022 → 2025 only)
 indicators <- c("gtmi", "cgsi", "psdi", "dcei", "gtei")
 
 gtmi_diffs <- purrr::map_dfr(indicators, function(ind) {
-  compute_gtmi_diff(groups_data, ind, 2020, 2025)
+  compute_gtmi_diff(groups_data, ind, 2022, 2025)
 })
 
 # left join with country classification to get income group and region for plotting
@@ -73,21 +73,24 @@ gtmi_diffs <- gtmi_diffs |>
 
 #Prepare facet groups:
 gtmi_classified <- gtmi_diffs |>
-  classify_gtmi_group(2020) |>
+  classify_gtmi_group(2022) |>
   classify_gtmi_group(2025)
 
 # All indicators at once — returns a named list of plots
 plots <- plot_gtmi_time_trends(
   gtmi_classified,
   indicator = c("gtmi", "cgsi", "psdi", "dcei", "gtei"),
-  grouping = "income_group",
-  group_order = c("High income", "Upper middle income", "Lower middle income", "Low income")
+  grouping  = "region"
 )
 
 # Save all plots
 output_dir <- here::here("analysis", "figs", "diffs")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 purrr::iwalk(plots, ~ggsave(file.path(output_dir, paste0(.y, ".png")), .x))
+
+
+
+
 
 
 
