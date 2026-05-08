@@ -1,4 +1,4 @@
-# Trends analysis draft
+# Trends analysis draft saved in the "figs/diffs"
 # This script is a draft for the trends analysis. 
 # It will be used to explore evolution of the GTMI groups and to create the figures for the trends analysis.
 
@@ -41,7 +41,7 @@ ggsave <- partial(
 
 devtools::load_all()
 
-groups_data <- gtmi2025 # Lazy data cleaned in raw-data/0.gtmi_data_cleaning.R
+groups_data <- gtmi_data # Lazy data cleaned in raw-data/0.gtmi_data_cleaning.R
 
 writexl::write_xlsx(
   groups_data,
@@ -87,14 +87,6 @@ plots <- plot_gtmi_time_trends(
 output_dir <- here::here("analysis", "figs", "diffs")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 purrr::iwalk(plots, ~ggsave(file.path(output_dir, paste0(.y, ".png")), .x))
-
-
-
-
-
-
-
-
 
 
 

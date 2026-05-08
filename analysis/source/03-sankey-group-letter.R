@@ -1,4 +1,4 @@
-# Sankey events by group letter
+# Sankey events by group letter saved in "figs/sankey"
 # This script is a draft for the sanky trends on classification
 
 # set-up -----------------------------------------------------------------
@@ -42,7 +42,7 @@ ggsave <- partial(
 
 devtools::load_all()
 
-groups_data <- gtmi2025 # Lazy data cleaned in raw-data/0.gtmi_data_cleaning.R
+groups_data <- gtmi_data # Lazy data cleaned in raw-data/0.gtmi_data_cleaning.R
 
 writexl::write_xlsx(
   groups_data,
@@ -196,7 +196,6 @@ iwalk(sankey_plots, ~ ggsave(
 
 
 
-# table of proportions ---------------------------------------------------
 
 
 

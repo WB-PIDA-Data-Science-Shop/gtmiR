@@ -1,4 +1,4 @@
-# Global avgs by region
+# Global avgs by region saved in "analysis/figs/timet_avg&boxplot"
 # This script is a draft for the average change by region analysis. 
 
 # set-up -----------------------------------------------------------------
@@ -40,7 +40,7 @@ ggsave <- partial(
 
 devtools::load_all()
 
-groups_data <- gtmi2025 |> # Lazy data cleaned in raw-data/0.gtmi_data_cleaning.R
+groups_data <- gtmi_data |> # Lazy data cleaned in raw-data/0.gtmi_data_cleaning.R
   select(-grp)
 
 country_class <- cliaretl::wb_income_and_region
