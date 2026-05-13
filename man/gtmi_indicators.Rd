@@ -8,7 +8,7 @@
 A tibble with ~594 rows and 52 variables:
 \describe{
 \item{year}{Survey wave year. Integer. One of \code{2020}, \code{2022}, or \code{2025}.}
-\item{code}{ISO 3166-1 alpha-3 country code. Character.}
+\item{country_code}{ISO 3166-1 alpha-3 country code. Character.}
 \item{economy}{Country name as published in the WB GovTech Dataset. Character.}
 \item{wave_dropout}{Logical flag. \code{TRUE} for Nicaragua (\code{NIC}) in 2025,
 which did not respond to survey questions. The 5 external index values

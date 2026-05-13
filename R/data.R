@@ -102,7 +102,7 @@
 #' @format A tibble with ~594 rows and 52 variables:
 #' \describe{
 #'   \item{year}{Survey wave year. Integer. One of \code{2020}, \code{2022}, or \code{2025}.}
-#'   \item{code}{ISO 3166-1 alpha-3 country code. Character.}
+#'   \item{country_code}{ISO 3166-1 alpha-3 country code. Character.}
 #'   \item{economy}{Country name as published in the WB GovTech Dataset. Character.}
 #'   \item{wave_dropout}{Logical flag. \code{TRUE} for Nicaragua (\code{NIC}) in 2025,
 #'     which did not respond to survey questions. The 5 external index values
@@ -202,12 +202,12 @@
 
 #' GTMI Indicator Longitudinal Metadata
 #'
-#' A lookup table describing the longitudinal comparability status of each of the
-#' 48 GTMI indicators (\code{wb_gtmi_i_1} through \code{wb_gtmi_i_48}). Use this
-#' table to filter \code{\link{gtmi_indicators}} to the appropriate indicator set
-#' before any longitudinal analysis.
+#' A lookup table describing the longitudinal comparability status and methodological
+#' characteristics of each of the 48 GTMI indicators (\code{wb_gtmi_i_1} through
+#' \code{wb_gtmi_i_48}). Use this table to filter \code{\link{gtmi_indicators}} to
+#' the appropriate indicator set before any longitudinal analysis.
 #'
-#' @format A tibble with 48 rows and 6 variables:
+#' @format A tibble with 48 rows and 12 variables:
 #' \describe{
 #'   \item{indicator}{Standard indicator name. Character. Matches column names in
 #'     \code{\link{gtmi_indicators}}, e.g. \code{"wb_gtmi_i_1"}.}
@@ -228,6 +228,31 @@
 #'     instrument.}
 #'   \item{note}{Free-text annotation for special handling requirements. Character.
 #'     \code{NA} where no special handling is needed.}
+#'   \item{pillar}{GTMI pillar to which the indicator is assigned. Character. One of
+#'     \code{"cgsi"}, \code{"psdi"}, \code{"dcei"}, or \code{"gtei"}.
+#'     \code{NA} for the four cross-cutting Interoperability indicators (I-1–4) and
+#'     for standalone external indices (I-16, I-18, I-27, I-43, I-44).}
+#'   \item{response_scale}{Possible response values for the indicator. Character.
+#'     One of \code{"0/1"} (binary), \code{"0/1/2"} (three-level progressive),
+#'     \code{"0/1/2/3"} (four-level progressive), \code{"0-1"} (continuous 0–1),
+#'     or \code{"0-100"} (continuous 0–100 scale; I-43 only).}
+#'   \item{data_source}{Origin of the indicator value. Character. Either
+#'     \code{"survey"} (direct GovTech survey response) or
+#'     \code{"external_index"} (sourced from an external dataset or index).}
+#'   \item{scoring_method}{Method used to score the indicator. Character. One of:
+#'     \itemize{
+#'       \item \code{"binary"} — presence/absence (0/1)
+#'       \item \code{"progressive"} — ordered levels with increasing score
+#'       \item \code{"external_index"} — value drawn directly from an external source
+#'     }}
+#'   \item{progressive_levels}{For progressive indicators, the number of score
+#'     levels above zero (i.e. the maximum score). Integer. \code{2L} for 0/1/2
+#'     indicators, \code{3L} for 0/1/2/3 indicators (I-23 and I-35).
+#'     \code{NA_integer_} for binary and external index indicators.}
+#'   \item{source}{Name of the institution or dataset providing the indicator value.
+#'     Character. One of \code{"WB GovTech Survey"},
+#'     \code{"UN E-Government Survey"}, \code{"ITU Global Cybersecurity Index"},
+#'     or \code{"World Bank Human Capital Index"}.}
 #' }
 #'
 #' @seealso \code{\link{gtmi_indicators}} for the panel dataset this table describes.

@@ -246,24 +246,41 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
     dplyr::group_by(region) |>
     dplyr::summarise(region_mean = mean(value, na.rm = TRUE), .groups = "drop")
 
+  # Per-year median per region — for the diamond overlay
+  year_region_median <- plot_data |>
+    dplyr::group_by(region, year) |>
+    dplyr::summarise(year_median = median(value, na.rm = TRUE), .groups = "drop")
+
   p <- ggplot(plot_data, aes(x = year, y = value, fill = region, color = region)) +
+    # Overall region mean reference line (all years pooled)
     geom_hline(
       data      = region_avg,
       aes(yintercept = region_mean),
-      color     = "grey4",
+      color     = "grey50",
       linetype  = "dashed",
-      linewidth = 0.5
+      linewidth = 0.4
     ) +
+    # Box (IQR + median bar)
     geom_boxplot(
-      width         = 0.3,
+      width         = 0.35,
       outlier.shape = NA,
-      alpha         = 0.5
+      alpha         = 0.15,
+      linewidth     = 0.5
     ) +
+    # Country-level jitter
     geom_jitter(
-      aes(color = region),
-      size   = 1.5,
-      alpha  = 0.6,
-      width  = 0.2
+      size   = 1.2,
+      alpha  = 0.4,
+      width  = 0.15
+    ) +
+    # Per-year median as a bold diamond — the key enhancement
+    geom_point(
+      data  = year_region_median,
+      aes(x = year, y = year_median, fill = region),
+      shape = 23,       # filled diamond
+      size  = 4,
+      color = "white",  # white border makes it pop against boxes
+      stroke = 1.2
     ) +
     scale_fill_brewer(palette  = "Dark2", name = "Region") +
     scale_color_brewer(palette = "Dark2", name = "Region") +
@@ -274,15 +291,17 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
       subtitle = "Distribution of country scores by year and region",
       x        = "Year",
       y        = "Score (0–1)",
-      caption  = "Each point represents one country. Dashed line = region average (all years)."
+      caption  = paste(
+        "Each point = one country.",
+        "Diamond = year median. Dashed line = overall region mean (all years pooled)."
+      )
     ) +
     theme(
-      legend.position = "none",
-      strip.text      = element_text(size = 9),
+      legend.position  = "none",
+      strip.text       = element_text(size = 9),
       panel.grid.minor = element_blank(),
       panel.grid.major = element_blank(),
-      panel.border = element_blank()
-
+      panel.border     = element_blank()
     )
 
   ggplot2::ggsave(
