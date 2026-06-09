@@ -10,6 +10,7 @@ library(readr)
 library(purrr)
 library(readxl)
 library(ggsankey)
+library(dplyr)
  
 
 
@@ -197,5 +198,171 @@ iwalk(sankey_plots, ~ ggsave(
 
 
 
+# outperform countries ---------------------------------------------------
+# Countries that made "leap" upgrades in GTMI group: D→B or C→A (2022→2025)
+
+leap_upgrades <- gtmi_long |>
+  filter(indicator == "gtmi", year %in% c(2022, 2025)) |>
+  select(country_code, country_name, year, group) |>
+  pivot_wider(names_from = year, values_from = group, names_prefix = "grp_") |>
+  filter(
+    (grp_2022 == "D" & grp_2025 == "B") |
+    (grp_2022 == "C" & grp_2025 == "A")
+  ) |>
+  mutate(
+    transition = paste0(grp_2022, " \u2192 ", grp_2025)
+  ) |>
+  left_join(
+    country_class |> select(country_code, income_group, region),
+    by = "country_code"
+  ) |>
+  left_join(
+    groups_data |>
+      filter(year %in% c(2022, 2025)) |>
+      select(country_code, year, gtmi) |>
+      pivot_wider(names_from = year, values_from = gtmi, names_prefix = "gtmi_"),
+    by = "country_code"
+  ) |>
+  mutate(gtmi_change = round(gtmi_2025 - gtmi_2022, 3)) |>
+  arrange(transition, desc(gtmi_change))
+
+leap_upgrades
+
+
+# 2025-levels-shares -----------------------------------------------------
+# Stacked bar: for each GTMI group (A–D), what share of countries comes from
+# each income level? Faceted by year (2022 vs 2025).
+
+income_colors <- c(
+  "High income"          = "#440154",  # deep purple
+  "Upper middle income"  = "#31688E",  # steel blue
+  "Lower middle income"  = "#35B779",  # mid green
+  "Low income"           = "#009FDA"   # cyan
+)
+
+income_levels <- c(
+  "High income",
+  "Upper middle income",
+  "Lower middle income",
+  "Low income"
+)
+
+shares_data <- gtmi_long |>
+  filter(indicator == "gtmi", year %in% c(2022, 2025), !is.na(group)) |>
+  select(country_code, year, group) |>
+  distinct() |>
+  left_join(
+    country_class |> select(country_code, income_group),
+    by = "country_code"
+  ) |>
+  filter(!is.na(income_group)) |>
+  mutate(
+    group        = factor(group, levels = c("A", "B", "C", "D")),
+    income_group = factor(income_group, levels = income_levels),
+    year         = factor(year)
+  ) |>
+  count(year, group, income_group, name = "n") |>
+  group_by(year, group) |>
+  mutate(
+    total = sum(n),
+    pct   = round(n / total * 100)
+  ) |>
+  ungroup() |>
+  mutate(bar_label = paste0(n, "\n(", pct, "%)"))
+
+p_shares <- ggplot(shares_data,
+                   aes(x = group, y = pct, fill = income_group)) +
+  geom_col(width = 0.7, color = "white", linewidth = 0.3) +
+  geom_text(
+    aes(label = bar_label),
+    position = position_stack(vjust = 0.5),
+    size      = 3,
+    color     = "white",
+    lineheight = 0.9
+  ) +
+  scale_fill_manual(
+    values = income_colors,
+    breaks = income_levels,
+    name   = "Income group"
+  ) +
+  scale_y_continuous(
+    labels = scales::label_percent(scale = 1),
+    limits = c(0, 101),
+    expand = c(0, 0)
+  ) +
+  facet_wrap(~year, nrow = 1) +
+  labs(
+    title    = "Income composition within GTMI groups (2022 vs 2025)",
+    subtitle = "Share of countries per income level within each group (A = Extensive \u2192 D = Low)",
+    x        = "GTMI Group",
+    y        = "Share of countries (%)",
+    caption  = "Source: World Bank GovTech Dataset. n shown inside bars."
+  ) +
+  theme(
+    legend.position  = "bottom",
+    panel.grid.major.x = element_blank()
+  ) +
+  guides(fill = guide_legend(nrow = 2))
+
+p_shares
+
+ggplot2::ggsave(
+  filename = here::here("analysis", "figs", "sankey", "income", "income_share_by_grp_year.png"),
+  plot     = p_shares,
+  width    = 12, height = 7, dpi = 300, bg = "white"
+)
+
+
+# treemap comparison -----------------------------------------------------
+# Side-by-side treemaps (2022 vs 2025): tile size = n countries,
+# hierarchy: GTMI group → income level, coloured by income group
+
+library(treemap)
+
+treemap_data <- shares_data |>
+  select(year, group, income_group, n) |>
+  mutate(
+    group        = as.character(group),
+    income_group = as.character(income_group),
+    year         = as.character(year)
+  )
+
+# Colour index aligned to income_levels order (viridis-derived, matches income_colors)
+treemap_palette <- c("#440154", "#31688E", "#35B779", "#009FDA")
+
+out_dir_tree <- here::here("analysis", "figs", "sankey", "income")
+dir.create(out_dir_tree, recursive = TRUE, showWarnings = FALSE)
+
+for (yr in c("2022", "2025")) {
+
+  png(
+    filename = file.path(out_dir_tree, paste0("treemap_income_grp_", yr, ".png")),
+    width    = 2400, height = 1600, res = 200, bg = "white"
+  )
+
+  treemap(
+    dtf            = treemap_data |> dplyr::filter(year == yr),
+    index          = c("group", "income_group"),   # hierarchy: group > income
+    vSize          = "n",
+    vColor         = "income_group",
+    type           = "categorical",
+    palette        = treemap_palette,
+    title          = paste0("Income composition within GTMI groups \u2014 ", yr),
+    title.legend   = "Income group",
+    fontsize.title = 16,
+    fontsize.labels = c(18, 12),          # group label, income label
+    fontface.labels = c("bold", "plain"),
+    align.labels   = list(c("center", "top"), c("center", "center")),
+    border.col     = c("white", "white"),
+    border.lwds    = c(3, 1),
+    overlap.labels = 0.5,
+    inflate.labels = FALSE,
+    bg.labels      = 0                    # transparent label backgrounds
+  )
+
+  dev.off()
+}
+
+message("Treemaps saved to: ", out_dir_tree)
 
 

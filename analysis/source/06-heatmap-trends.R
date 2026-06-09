@@ -67,50 +67,63 @@ raw_panel <- gtmi_indicators
 # load 2025 grp data
 gtmi_data <- gtmi_data
 
-# pooling -------------------------------------------------------------------
-# Interoperability (I1-4):          0–2 each → normalize to 0–1 → mean
-# Public Sector Innovation (I46-48): I46/I47 are 0–2, I48 is 0–1 → rescale I48 ×2 → normalize → mean
+# dictionary-driven setup -------------------------------------------------
+# Group memberships and normalization maxes are derived from gtmi_indicator_metadata.
+# Standalones (external_index) are excluded.
+# Only indicators with 2-year or 3-year longitudinal feasibility are retained
+# (both waves available for the 2022–2025 comparison).
 
-indicators_2025 <- raw_panel |>
-  filter(year == 2025) |>
-  select(country_code,
-         starts_with("wb_gtmi_i_")
-        )
+dict_feasible <- dictionary |>
+  dplyr::filter(
+    longitudinal_feasibility %in% c("2-year", "3-year"),
+    data_source == "survey"
+  )
 
-pooled <- indicators_2025 |>
-  mutate(
-    # Normalize each indicator to 0–1 before pooling
-    # Interoperability: I-1 to I-4 (max = 2)
-    across(c(wb_gtmi_i_1, wb_gtmi_i_2, wb_gtmi_i_3, wb_gtmi_i_4),
-           ~ . / 2,
-           .names = "{.col}_norm"),
-
-    # Public Sector Innovation: I-46, I-47 (max = 2), I-48 (max = 1 → rescale ×2 then /2)
-    wb_gtmi_i_46_norm = wb_gtmi_i_46 / 2,
-    wb_gtmi_i_47_norm = wb_gtmi_i_47 / 2,
-    wb_gtmi_i_48_norm = (wb_gtmi_i_48 * 2) / 2,  # rescale to 0–2 then normalize
-
-    # Group scores: mean of available normalized indicators
-    interoperability = rowMeans(
-      pick(wb_gtmi_i_1_norm, wb_gtmi_i_2_norm,
-           wb_gtmi_i_3_norm, wb_gtmi_i_4_norm),
-      na.rm = TRUE
-    ),
-    public_sector_innovation = rowMeans(
-      pick(wb_gtmi_i_46_norm, wb_gtmi_i_47_norm, wb_gtmi_i_48_norm),
-      na.rm = TRUE
+# Max score from dictionary: progressive_levels for progressive, 1 for binary
+indicator_max <- dict_feasible |>
+  dplyr::mutate(
+    max_score = dplyr::case_when(
+      scoring_method == "progressive" ~ as.numeric(progressive_levels),
+      scoring_method == "binary"      ~ 1,
+      TRUE                            ~ NA_real_
     )
   ) |>
-  select(country_code, interoperability, public_sector_innovation)
+  dplyr::filter(!is.na(max_score)) |>
+  dplyr::select(indicator, max_score) |>
+  tibble::deframe()
 
+# Pillar-based groups: all feasible survey indicators assigned to a pillar
+pillar_groups <- dict_feasible |>
+  dplyr::filter(!is.na(pillar), indicator %in% names(indicator_max)) |>
+  dplyr::group_by(pillar) |>
+  dplyr::summarise(indicators = list(indicator), .groups = "drop") |>
+  tibble::deframe()
+
+# Two custom cross-cutting groups (pillar = NA in dictionary)
+custom_groups <- list(
+  interoperability    = paste0("wb_gtmi_i_", 1:4),
+  public_sector_innov = paste0("wb_gtmi_i_", c(46, 47, 48))
+)
+
+# Row order for heatmap: custom groups first, then the 4 official pillars
+indicator_groups <- c(custom_groups, pillar_groups)
+
+group_labels <- c(
+  interoperability    = "Interoperability",
+  public_sector_innov = "Public Sector Innov.",
+  cgsi                = "Core Government Systems Index (CGSI)",
+  psdi                = "Public Service Delivery (PSDI)",
+  dcei                = "Digital Citizen Engagement (DCEI)",
+  gtei                = "GovTech Enabling Env. (GTEI)"
+)
 
 
 # panel-data --------------------------------------------------------------
 
-# grp (maturity band A–D) comes from gtmi_data (composite index panel), 2025 wave
-grp_lookup <- gtmi_data |> 
-    filter(year == 2025) |>
-    select(country_code, grp)
+# grp (maturity band A–D) from gtmi_data composite index panel, 2025 wave
+grp_lookup <- gtmi_data |>
+  filter(year == 2025) |>
+  select(country_code, grp)
 
 country_class <- cliaretl::wb_income_and_region |>
   select(country_code, region, income_group) |>
@@ -127,79 +140,34 @@ country_class <- cliaretl::wb_income_and_region |>
     )
   )
 
-wide_data <- pooled |>
-  left_join(grp_lookup,    by = "country_code") |>
-  left_join(country_class, by = "country_code") |>
-  filter(!is.na(region)) |> 
-  filter(!is.na(grp)) |> 
-  filter(!is.na(income_group))
-
-
-# group-definitions -------------------------------------------------------
-
-# Theoretical max per indicator (used for 0–1 normalization)
-# Most indicators: 0–2; I-23, I-35: 0–3; I-28 to I-32, I-48: 0–1
-indicator_max <- c(
-  wb_gtmi_i_1  = 2, wb_gtmi_i_2  = 2, wb_gtmi_i_3  = 2, wb_gtmi_i_4  = 2,
-  wb_gtmi_i_5  = 2, wb_gtmi_i_6  = 2, wb_gtmi_i_7  = 2, wb_gtmi_i_8  = 2,
-  wb_gtmi_i_9  = 2, wb_gtmi_i_10 = 2, wb_gtmi_i_11 = 2, wb_gtmi_i_12 = 2,
-  wb_gtmi_i_13 = 2, wb_gtmi_i_14 = 2,
-  wb_gtmi_i_20 = 2, wb_gtmi_i_21 = 2, wb_gtmi_i_22 = 2, wb_gtmi_i_23 = 3,
-  wb_gtmi_i_24 = 2, wb_gtmi_i_25 = 2,
-  wb_gtmi_i_28 = 1, wb_gtmi_i_29 = 1, wb_gtmi_i_30 = 1, wb_gtmi_i_31 = 1,
-  wb_gtmi_i_32 = 1,
-  wb_gtmi_i_33 = 2, wb_gtmi_i_34 = 2, wb_gtmi_i_35 = 3, wb_gtmi_i_36 = 2,
-  wb_gtmi_i_37 = 2, wb_gtmi_i_38 = 2, wb_gtmi_i_39 = 2,
-  wb_gtmi_i_46 = 2, wb_gtmi_i_47 = 2, wb_gtmi_i_48 = 1
-)
-
-indicator_groups <- list(
-  interoperability      = paste0("wb_gtmi_i_", c(1:4)),
-  core_gov_systems      = paste0("wb_gtmi_i_", c(5:14, 20:25)),
-  public_sector_innov   = paste0("wb_gtmi_i_", c(46:48)),
-  data_enablers         = paste0("wb_gtmi_i_", c(34, 37, 38, 39)),
-  institutional_setting = paste0("wb_gtmi_i_", c(33, 35, 36)),
-  digital_engagement    = paste0("wb_gtmi_i_", c(28:32))
-)
-
-group_labels <- c(
-  interoperability      = "Interoperability",
-  core_gov_systems      = "Core Gov. Systems",
-  public_sector_innov   = "Public Sector Innov.",
-  data_enablers         = "Data Enablers",
-  institutional_setting = "Institutional Setting",
-  digital_engagement    = "Digital Engagement"
-)
-
 
 # normalize-and-score -----------------------------------------------------
 
 heatmap_panel <- raw_panel |>
   filter(year %in% c(2022, 2025), !wave_dropout) |>
   select(country_code, year, all_of(names(indicator_max))) |>
-  # Normalize each indicator to 0–1 using its theoretical max
+  # Normalize each indicator to 0–1 using dictionary-derived max
   mutate(
     across(
       all_of(names(indicator_max)),
       ~ . / indicator_max[cur_column()]
     )
   ) |>
-  # Compute group scores as mean of normalized indicators (na.rm = TRUE for partial coverage)
+  # Compute group scores as mean of normalized indicators within each group
   mutate(
-    interoperability      = rowMeans(pick(all_of(indicator_groups$interoperability)),      na.rm = TRUE),
-    core_gov_systems      = rowMeans(pick(all_of(indicator_groups$core_gov_systems)),      na.rm = TRUE),
-    public_sector_innov   = rowMeans(pick(all_of(indicator_groups$public_sector_innov)),   na.rm = TRUE),
-    data_enablers         = rowMeans(pick(all_of(indicator_groups$data_enablers)),         na.rm = TRUE),
-    institutional_setting = rowMeans(pick(all_of(indicator_groups$institutional_setting)), na.rm = TRUE),
-    digital_engagement    = rowMeans(pick(all_of(indicator_groups$digital_engagement)),    na.rm = TRUE)
+    interoperability    = rowMeans(pick(all_of(custom_groups$interoperability)),    na.rm = TRUE),
+    public_sector_innov = rowMeans(pick(all_of(custom_groups$public_sector_innov)), na.rm = TRUE),
+    cgsi                = rowMeans(pick(all_of(pillar_groups$cgsi)),                na.rm = TRUE),
+    psdi                = rowMeans(pick(all_of(pillar_groups$psdi)),                na.rm = TRUE),
+    dcei                = rowMeans(pick(all_of(pillar_groups$dcei)),                na.rm = TRUE),
+    gtei                = rowMeans(pick(all_of(pillar_groups$gtei)),                na.rm = TRUE)
   ) |>
-  select(country_code, year, names(group_labels)) |>
+  select(country_code, year, all_of(names(group_labels))) |>
   left_join(grp_lookup,    by = "country_code") |>
   left_join(country_class, by = "country_code") |>
-  filter(!is.na(region)) |>
-  mutate(grp = factor(grp, levels = c("A", "B", "C", "D"))) |> 
-    filter(!is.na(grp)) |>
-      filter(!is.na(income_group))
+  filter(!is.na(region), !is.na(grp), !is.na(income_group)) |>
+  mutate(grp = factor(grp, levels = c("A", "B", "C", "D")))
+
 
 
 # heatmap-function --------------------------------------------------------

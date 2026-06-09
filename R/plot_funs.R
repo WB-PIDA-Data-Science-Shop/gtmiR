@@ -228,6 +228,51 @@ plot_gtmi_time_trends <- function(
         )
     }
 
+    # Fixed palettes — consistent with other scripts in the analysis pipeline
+    income_colors <- c(
+      "High income"          = "#1A6BB5",
+      "Upper middle income"  = "#a831d6ff",
+      "Lower middle income"  = "#e290deff",
+      "Low income"           = "#01cbd9ff"
+    )
+    grp_colors <- c(
+      "A" = "#4DAF4A",
+      "B" = "#377EB8",
+      "C" = "#FF7F00",
+      "D" = "#E41A1C"
+    )
+    region_colors <- c(
+      "EAP"    = "#A6CEE3",
+      "ECA"    = "#1F78B4",
+      "LAC"    = "#B2DF8A",
+      "MENAAP" = "#33A02C",
+      "NAM"    = "#FB9A99",
+      "SAR"    = "#E31A1C",
+      "SSA"    = "#FDBF6F"
+    )
+
+    color_scale <- if (grouping == "income_group") {
+      ggplot2::scale_color_manual(
+        values = income_colors,
+        name   = "Income Group"
+      )
+    } else if (grouping == "grp") {
+      ggplot2::scale_color_manual(
+        values = grp_colors,
+        name   = "GTMI Group"
+      )
+    } else if (grouping == "region") {
+      ggplot2::scale_color_manual(
+        values = region_colors,
+        name   = "Region"
+      )
+    } else {
+      ggplot2::scale_color_brewer(
+        palette = "Dark2",
+        name    = tools::toTitleCase(gsub("_", " ", grouping))
+      )
+    }
+
     plot_data |>
       dplyr::group_by(.data[[grouping]]) |>
       dplyr::mutate(
@@ -247,10 +292,7 @@ plot_gtmi_time_trends <- function(
         alpha      = 0.6,
         color      = "grey60"
       ) +
-      scale_color_brewer(
-        palette = "Dark2",
-        name    = tools::toTitleCase(gsub("_", " ", grouping))
-      ) +
+      color_scale +
       scale_y_continuous(
         limits = y_limits,
         breaks = scales::breaks_pretty()

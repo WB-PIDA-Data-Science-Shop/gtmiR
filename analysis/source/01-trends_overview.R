@@ -79,51 +79,22 @@ gtmi_classified <- gtmi_diffs |>
 # All indicators at once — returns a named list of plots
 plots <- plot_gtmi_time_trends(
   gtmi_classified,
-  indicator = c("gtmi", "cgsi", "psdi", "dcei", "gtei"),
-  grouping  = "region"
+  indicator   = c("gtmi", "cgsi", "psdi", "dcei", "gtei"),
+  grouping    = "income_group",
+  group_order = c("High income", "Upper middle income",
+                  "Lower middle income", "Low income")
 )
 
 # Save all plots
 output_dir <- here::here("analysis", "figs", "diffs")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-purrr::iwalk(plots, ~ggsave(file.path(output_dir, paste0(.y, ".png")), .x))
+purrr::iwalk(plots, ~ggsave(file.path(output_dir, paste0(.y, "_income.png")), .x))
 
 
 
 
-# legacy-by-country ------------------------------------------------------
-
-# Create plots and save to output directory for all indicator/period/grouping combinations
-
-plot_specs <- tidyr::expand_grid(
-  indicator   = c("gtmi", "cgsi", "psdi", "dcei", "gtei"),
-  from_year   = c(2020, 2022),
-  to_year     = c(2022, 2025),
-  grouping    = c("grp", "income_group", "region")
-) |>
-  filter(from_year < to_year) 
 
 
-
-
-output_dir <- here::here("analysis", "figs", "year-to-year-changes")
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-
-purrr::pwalk(plot_specs, function(indicator, from_year, to_year, grouping) {
-  p <- gtmi_diffs |>
-    filter(.data$indicator == .env$indicator,
-           .data$from_year == .env$from_year,
-           .data$to_year   == .env$to_year) |>
-    generate_gtmi_diff_plot(
-      grouping = grouping,
-      title    = glue::glue("Change in {toupper(indicator)} ({from_year} \u2192 {to_year}) by {grouping}")
-    )
-
-  filename <- glue::glue("{output_dir}/{indicator}_{from_year}_{to_year}_{grouping}.png")
-  ggsave(filename, plot = p)
-})
-
-# End of code
 
 
 

@@ -29,13 +29,6 @@ theme_set(
     )
 )
 
-ggsave <- partial(
-  ggplot2::ggsave,
-  bg = "white",
-  width = 14,
-  height = 8
-)
-
 
 # data-load ----------------------------------------------------------------
 

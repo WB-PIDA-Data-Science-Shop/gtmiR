@@ -99,6 +99,25 @@ make_corr_scatter <- function(
     "D" = "#E41A1C"
   )
 
+  # Fixed Paired palette for regions — consistent across all plots
+  region_colors <- c(
+    "EAP"    = "#A6CEE3",
+    "ECA"    = "#1F78B4",
+    "LAC"    = "#B2DF8A",
+    "MENAAP" = "#33A02C",
+    "NAM"    = "#FB9A99",
+    "SAR"    = "#E31A1C",
+    "SSA"    = "#FDBF6F"
+  )
+
+  # Fixed viridis-derived palette for income groups — high→low = purple→cyan
+  income_colors <- c(
+    "High income"          = "#440154",  # deep purple
+    "Upper middle income"  = "#31688E",  # steel blue
+    "Lower middle income"  = "#35B779",  # mid green
+    "Low income"           = "#009FDA"   # cyan
+  )
+
   # ── Filter to rows with valid x, y and color_by ───────────────────────────
   plot_data <- data |>
     dplyr::filter(
@@ -144,7 +163,7 @@ make_corr_scatter <- function(
         label = country_code,
         color = .data[[color_by]]
       ),
-      size         = 2.5,
+      size         = 3,
       max.overlaps = 20,
       show.legend  = FALSE
     )
@@ -159,7 +178,7 @@ make_corr_scatter <- function(
       se        = FALSE,
       color     = "grey30",
       linetype  = "dashed",
-      linewidth = 0.9,
+      linewidth = 0.75,
       na.rm     = TRUE
     )
   } else {
@@ -186,6 +205,16 @@ make_corr_scatter <- function(
     p <- p + ggplot2::scale_color_manual(
       values = grp_colors,
       name   = "GTMI Group"
+    )
+  } else if (color_by == "region") {
+    p <- p + ggplot2::scale_color_manual(
+      values = region_colors,
+      name   = "Region"
+    )
+  } else if (color_by == "income_group") {
+    p <- p + ggplot2::scale_color_manual(
+      values = income_colors,
+      name   = "Income Group"
     )
   } else {
     p <- p + ggplot2::scale_color_brewer(
@@ -236,8 +265,217 @@ make_corr_scatter <- function(
     ggplot2::ggsave(
       filename = filename,
       plot     = p,
-      width    = 9,
-      height   = 6,
+      width    = 10,
+      height   = 10,
+      dpi      = 300,
+      bg       = "white"
+    )
+  }
+
+  p
+}
+
+#' a sina-style jittered dot layer coloured by the grouping variable, and a
+#' mean diamond overlay. No background band rectangles are used — the colour
+#' palette is applied directly to the dot and mean layers for cleaner integration.
+#'
+#' @param data A data frame. Typically \code{corr_base} from the correlation
+#'   analysis pipeline, already filtered or passed in full.
+#' @param x A string naming the GTMI index column to plot on the x-axis
+#'   (\code{"gtmi"}, \code{"cgsi"}, \code{"psdi"}, \code{"dcei"}, \code{"gtei"}).
+#' @param color_by A string naming the column used for point and mean colour.
+#'   Supported values: \code{"region"}, \code{"income_group"}, \code{"grp"}.
+#'   Defaults to \code{"income_group"}.
+#' @param facet_by A string naming the column to use for \code{facet_wrap},
+#'   or \code{NULL} (default) for no faceting.
+#' @param style One of \code{"boxplot"} (default, notched), \code{"violin"},
+#'   or \code{"both"} (violin with boxplot inset).
+#' @param title A string for the plot title. Auto-generated if \code{NULL}.
+#' @param filename A string file path to save the plot, or \code{NULL}
+#'   (default) to return without saving.
+#'
+#' @return A \code{ggplot} object.
+#'
+#' @examples
+#' \dontrun{
+#' make_corr_boxplot(
+#'   data     = corr_base,
+#'   x        = "gtmi",
+#'   color_by = "income_group",
+#'   facet_by = "outcome",
+#'   style    = "both"
+#' )
+#' }
+#'
+#' @importFrom dplyr filter group_by summarise across all_of
+#' @importFrom ggplot2 ggplot aes geom_violin geom_boxplot geom_jitter
+#'   geom_point scale_color_manual scale_fill_manual facet_wrap
+#'   scale_y_continuous labs theme_minimal theme
+#' @importFrom glue glue
+#' @importFrom tools toTitleCase
+#' @export
+make_corr_boxplot <- function(
+    data,
+    x,
+    color_by = "income_group",
+    facet_by = NULL,
+    style    = c("boxplot", "violin", "both"),
+    title    = NULL,
+    filename = NULL
+) {
+
+  style <- match.arg(style)
+
+  # ── Shared palettes (must match make_corr_scatter) ────────────────────────
+  grp_colors <- c(
+    "A" = "#4DAF4A",
+    "B" = "#377EB8",
+    "C" = "#FF7F00",
+    "D" = "#E41A1C"
+  )
+
+  region_colors <- c(
+    "EAP"    = "#A6CEE3",
+    "ECA"    = "#1F78B4",
+    "LAC"    = "#B2DF8A",
+    "MENAAP" = "#33A02C",
+    "NAM"    = "#FB9A99",
+    "SAR"    = "#E31A1C",
+    "SSA"    = "#FDBF6F"
+  )
+
+  income_colors <- c(
+    "High income"          = "#440154",  # deep purple
+    "Upper middle income"  = "#31688E",  # steel blue
+    "Lower middle income"  = "#35B779",  # mid green
+    "Low income"           = "#009FDA"   # cyan
+  )
+
+  palette <- switch(color_by,
+    grp          = grp_colors,
+    region       = region_colors,
+    income_group = income_colors,
+    NULL  # fallback: let ggplot assign
+  )
+
+  legend_name <- switch(color_by,
+    grp          = "GTMI Group",
+    region       = "Region",
+    income_group = "Income Group",
+    tools::toTitleCase(gsub("_", " ", color_by))
+  )
+
+  # ── Filter valid rows ─────────────────────────────────────────────────────
+  plot_data <- data |>
+    dplyr::filter(
+      !is.na(.data[[x]]),
+      !is.na(.data[[color_by]])
+    )
+
+  auto_title <- title %||%
+    glue::glue("{toupper(x)} score distribution by {gsub('_', ' ', color_by)}")
+
+  # ── Group means (diamond overlay) ─────────────────────────────────────────
+  group_vars <- c(color_by, if (!is.null(facet_by)) facet_by)
+  means_data <- plot_data |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
+    dplyr::summarise(mean_x = mean(.data[[x]], na.rm = TRUE), .groups = "drop")
+
+  # ── Base plot ─────────────────────────────────────────────────────────────
+  p <- ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(x = .data[[color_by]], y = .data[[x]])
+  )
+
+  # ── Distribution layer ────────────────────────────────────────────────────
+  if (style == "violin" || style == "both") {
+    p <- p + ggplot2::geom_violin(
+      fill      = "grey92",
+      color     = "grey60",
+      linewidth = 0.4,
+      trim      = FALSE,
+      alpha     = 0.7
+    )
+  }
+
+  if (style == "boxplot" || style == "both") {
+    p <- p + ggplot2::geom_boxplot(
+      notch         = TRUE,
+      notchwidth    = 0.5,
+      width         = if (style == "both") 0.18 else 0.4,
+      outlier.shape = NA,        # outliers shown via jitter instead
+      fill          = "grey88",
+      color         = "grey35",
+      linewidth     = 0.45,
+      alpha         = 0.85
+    )
+  }
+
+  # ── Jittered country dots — coloured by grouping ──────────────────────────
+  p <- p + ggplot2::geom_jitter(
+    ggplot2::aes(color = .data[[color_by]]),
+    width  = 0.18,
+    size   = 1.6,
+    alpha  = 0.55,
+    stroke = 0
+  )
+
+  # ── Group mean diamond overlay ────────────────────────────────────────────
+  p <- p + ggplot2::geom_point(
+    data  = means_data,
+    ggplot2::aes(
+      x     = .data[[color_by]],
+      y     = mean_x,
+      color = .data[[color_by]]
+    ),
+    shape  = 23,
+    size   = 4,
+    fill   = "white",
+    stroke = 1.6
+  )
+
+  # ── Colour scale ──────────────────────────────────────────────────────────
+  if (!is.null(palette)) {
+    p <- p +
+      ggplot2::scale_color_manual(values = palette, name = legend_name) +
+      ggplot2::scale_fill_manual(values  = palette, name = legend_name,
+                                 guide   = "none")
+  }
+
+  # ── Optional facet ────────────────────────────────────────────────────────
+  if (!is.null(facet_by)) {
+    p <- p + ggplot2::facet_wrap(
+      stats::as.formula(paste("~", facet_by)),
+      scales = "free_x"
+    )
+  }
+
+  # ── Scales, labels, theme ─────────────────────────────────────────────────
+  p <- p +
+    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+    ggplot2::labs(
+      title    = auto_title,
+      subtitle = glue::glue(
+        "Notch = 95% CI around median  \u00b7  Diamond = group mean  \u00b7  Dots = countries"
+      ),
+      x        = tools::toTitleCase(gsub("_", " ", color_by)),
+      y        = glue::glue("{toupper(x)} Score (0\u20131)"),
+      caption  = "Source: World Bank GovTech Dataset."
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(
+      legend.position    = "none",   # colour already on x-axis
+      panel.grid.major.x = ggplot2::element_blank(),
+      axis.text.x        = ggplot2::element_text(angle = 20, hjust = 1)
+    )
+
+  # ── Optional save ─────────────────────────────────────────────────────────
+  if (!is.null(filename)) {
+    ggplot2::ggsave(
+      filename = filename,
+      plot     = p,
+      width    = 10,
+      height   = 10,
       dpi      = 300,
       bg       = "white"
     )
