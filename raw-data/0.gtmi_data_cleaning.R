@@ -1,4 +1,4 @@
-## code to prepare `gtmi2025` dataset goes here
+## code to prepare `gtmi_data` dataset goes here
 # GovTech Dataset downloaded direcltly from the WB Development Data Hub
 # available at: https://datacatalog.worldbank.org/int/search/dataset/0037889/govtech-dataset
 # Last access: 03/23/2026
@@ -160,8 +160,8 @@ gtmi_panel |>
 
 
 #rename 
-gtmi2025 <- gtmi_panel |> 
+gtmi_data <- gtmi_panel |> 
   select(year, country_code, country_name, grp, gtmi, cgsi, psdi, dcei, gtei)
 
 # Export ---------------------------------------------------------
-usethis::use_data(gtmi2025, overwrite = TRUE)
+usethis::use_data(gtmi_data, overwrite = TRUE)
