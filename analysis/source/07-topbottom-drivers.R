@@ -14,12 +14,13 @@ library(ggplot2)
 library(stringr)
 library(readr)
 library(purrr)
+library(janitor)
 
 ggsave <- partial(
   ggplot2::ggsave,
   bg = "white",
-  width = 14,
-  height = 22
+  width = 16,
+  height = 18
 )
 
 
@@ -32,13 +33,6 @@ devtools::load_all()
 
 gtmi_indicators_raw <- gtmi_indicators
 
-
-indicators <- raw_panel |>
-  filter(year >= 2022) |>
-  select(country_code,
-        year,
-         starts_with("wb_gtmi_i_")
-        ) |> glimpse()
 
 
 metadata <- gtmi_indicator_metadata
@@ -126,17 +120,17 @@ top_movers <- pp_change |>
 ## this avoids duplicate-label collisions that a shared discrete/factor
 ## scale would otherwise cause across facets ("free_y" reordering trick).
 ## ---------------------------------------------------------------------------
-top_movers <- top_movers %>%
-  group_by(grp) %>%
+top_movers <- top_movers |>
+  group_by(grp) |>
   arrange(
     grp,
     desc(pp_change > 0),       # positives block first, negatives block second
     if_else(pp_change > 0,
             -abs(pp_change),   # positives: largest magnitude first (unchanged behavior)
             abs(pp_change))    # negatives: smallest magnitude first (the fix)
-  ) %>%
-  mutate(y_pos = row_number()) %>%
-  ungroup() %>%
+  ) |>
+  mutate(y_pos = row_number()) |>
+  ungroup() |>
   mutate(
     y_key = paste(grp, y_pos, sep = "_"),
     y_lab = fct_reorder(y_key, -y_pos)
