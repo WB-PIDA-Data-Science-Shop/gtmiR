@@ -189,7 +189,7 @@
 #' ## Blocked indicators
 #' \code{wb_gtmi_i_40} and \code{wb_gtmi_i_41} measure \strong{different constructs}
 #' in 2020/2022 versus 2025. Never use these in longitudinal models without subsetting
-#' to a single wave. See \code{\link{feasibility_flags}} for full details.
+#' to a single wave. See \code{\link{gtmi_indicator_metadata}} for full details.
 #'
 #' @seealso \code{\link{gtmi_indicator_metadata}} for the per-indicator longitudinal
 #'   feasibility lookup table.
