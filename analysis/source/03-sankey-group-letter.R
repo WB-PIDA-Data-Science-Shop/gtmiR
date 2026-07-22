@@ -188,7 +188,7 @@ sankey_plots <- imap(sankey_by_indicator, function(df, ind) {
           axis.title.y = element_blank(),
           axis.text.y  = element_blank(),
           axis.ticks.y = element_blank(),
-          axis.text.x = element_text(size = 4, hjust = 0.5, angle = 45),
+          axis.text.x = element_text(size = 4, hjust = 0.5, angle = 45)
     )
 })
 
