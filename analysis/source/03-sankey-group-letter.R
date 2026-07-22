@@ -54,6 +54,12 @@ writexl::write_xlsx(
 country_class <- cliaretl::wb_income_and_region
 
 
+# Group labels (defined early for reuse across all visualizations) ----
+
+grp_labels <- c("A" = "A: Extensive", "B" = "B: Significant",
+                "C" = "C: Medium",    "D" = "D: Low")
+
+
 # analysis ----------------------------------------------------------------
 
 #Prepare facet groups:
@@ -169,13 +175,12 @@ sankey_plots <- imap(sankey_by_indicator, function(df, ind) {
     ggsankey::geom_sankey_label(size = 3, fill = "white") +
     scale_fill_manual(
       values = group_colors,
-      labels = c("A" = "A: Extensive", "B" = "B: Significant",
-                 "C" = "C: Medium",    "D" = "D: Low"),
+      labels = grp_labels,
       drop = FALSE
     ) +
     labs(
       title    = unique(df$indicator_name),
-      subtitle = "Country group transitions (2020 \u2192 2022 \u2192 2025)",
+      subtitle = "Country group transitions (2020 → 2022 → 2025)",
       x        = "Year",
       fill     = "Group"
     ) +
@@ -210,7 +215,7 @@ leap_upgrades <- gtmi_long |>
     (grp_2022 == "C" & grp_2025 == "A")
   ) |>
   mutate(
-    transition = paste0(grp_2022, " \u2192 ", grp_2025)
+    transition = paste0(grp_2022, " → ", grp_2025)
   ) |>
   left_join(
     country_class |> select(country_code, income_group, region),
@@ -239,10 +244,10 @@ income_colors <- c(
 )
 
 income_levels <- c(
-  "Low income",
-  "Lower middle income",
+  "High income",
   "Upper middle income",
-  "High income"
+  "Lower middle income",
+  "Low income"
 )
 
 counts_data <- gtmi_long |>
@@ -261,13 +266,7 @@ counts_data <- gtmi_long |>
   filter(!is.na(income_group)) |>
   mutate(
     year = factor(year, levels = c(2020, 2025)),
-    group = factor(group, levels = c("D", "C", "B", "A"),
-                          labels = c("Extensive Adoption", "Significant Adoption", "Medium Adoption", "Low Adoption")
-    ),
-    income_group = factor(
-      income_group,
-      levels = income_levels
-    )
+    group = factor(group, levels = c("A", "B", "C", "D"))
   ) |>
   count(year, group, income_group, name = "n") |>
   group_by(year, group) |>
@@ -282,31 +281,33 @@ p_divide <- ggplot(
   aes(
     x = group,
     y = n,
-    fill = income_group
+    fill = factor(income_group, levels = income_levels)
   )
 ) +
   geom_col(
-    width = .78,
+    width = 0.65,
     color = "white",
-    linewidth = .35
+    linewidth = 0.5
   ) +
-
-  # emphasize overall concentration
+  
+  # Add count labels inside bars
   geom_text(
-    data = totals,
-    aes(x = group, y = total + 2, label = total),
-    inherit.aes = FALSE,
+    aes(label = n),
+    position = position_stack(vjust = 0.5),
+    color = "white",
     fontface = "bold",
-    size = 5
+    size = 4
   ) +
 
   scale_fill_manual(
     values = income_colors,
-    breaks = income_levels
+    breaks = income_levels,
+    name = "Income group"
   ) +
 
   scale_y_continuous(
-    expand = expansion(mult = c(0, .08))
+    expand = expansion(mult = c(0, .05)),
+    limits = c(0, 80)
   ) +
 
   facet_wrap(
@@ -314,49 +315,36 @@ p_divide <- ggplot(
     nrow = 1
   ) +
 
-  labs(
-    title =
-      "The digital divide widened between 2020 and 2025",
-    subtitle =
-      paste(
-        "High-income countries became increasingly concentrated",
-        "in top-performing GTMI groups (A–B), while lower-income",
-        "countries remained overrepresented in lower-performing groups."
-      ),
-    x = "GTMI group (D = Low → A = Extensive)",
-    y = "Number of countries",
-    fill = NULL,
-    caption = "Source: World Bank GovTech Dataset"
+  scale_x_discrete(
+    labels = grp_labels
   ) +
 
-  theme_minimal(base_size = 18) +
+  labs(
+    title = NULL,
+    x = "GTMI Group",
+    y = "Number of countries",
+    fill = "Income group"
+  ) +
+
+  theme_minimal(base_size = 14) +
 
   theme(
     legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.text = element_text(size = 11),
 
-    panel.grid.major.x =
-      element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "gray90", linewidth = 0.3),
 
-    panel.grid.minor =
-      element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
 
-    strip.text =
-      element_text(face = "bold"),
-
-    axis.title.x =
-      element_text(face = "bold"),
-
-    axis.title.y =
-      element_text(face = "bold"),
-
-    plot.title =
-      element_text(
-        face = "bold",
-        size = 24
-      ),
-
-    plot.subtitle =
-      element_text(size = 15)
+    axis.title.x = element_text(face = "bold", size = 12),
+    axis.title.y = element_text(face = "bold", size = 12),
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 20)
   )
 
 
@@ -367,6 +355,6 @@ ggsave(
     "figs",
     "sankey",
     "income",
-    "digital_divide_widening_2020_2025.png"
+    "digital_divide_widening_2020_2025_v2.png"
   )
 )

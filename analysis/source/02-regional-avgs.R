@@ -56,10 +56,10 @@ grp_colors <- c(
 )
 
 grp_labels <- c(
-  "A" = "A  (>=0.75)",
-  "B" = "B  (0.50-0.75)",
-  "C" = "C  (0.25-0.50)",
-  "D" = "D  (<0.25)"
+  "A" = "A: Extensive",
+  "B" = "B: Significant",
+  "C" = "C: Medium",
+  "D" = "D: Low"
 )
 
 income_levels <- c(
@@ -150,7 +150,15 @@ build_median <- function(df, facet_var) {
 build_mean <- function(df, facet_var) {
   df |>
     group_by(across(all_of(facet_var))) |>
-    summarise(region_mean = mean(value, na.rm = TRUE), .groups = "drop")
+    summarise(region_mean = mean(value, na.rm = TRUE), .groups = "drop") |>
+    mutate(
+      grp = factor(case_when(
+        region_mean >= 0.75 ~ "A",
+        region_mean >= 0.50 ~ "B",
+        region_mean >= 0.25 ~ "C",
+        TRUE                ~ "D"
+      ), levels = c("A", "B", "C", "D"))
+    )
 }
 
 build_facet_order <- function(df, facet_var) {
@@ -179,8 +187,7 @@ build_v3_plot <- function(plot_data, facet_var, facet_nrow = 1, ind_label) {
 
     geom_hline(
       data      = mean_df,
-      aes(yintercept = region_mean),
-      color     = "grey65",
+      aes(yintercept = region_mean, color = grp),
       linetype  = "dashed",
       linewidth = 0.35
     ) +
@@ -303,7 +310,15 @@ med_v5 <- v5_data |>
 # Pooled mean per indicator -- dashed reference line
 mean_v5 <- v5_data |>
   group_by(indicator_name) |>
-  summarise(overall_mean = mean(value, na.rm = TRUE), .groups = "drop")
+  summarise(overall_mean = mean(value, na.rm = TRUE), .groups = "drop") |>
+  mutate(
+    grp = factor(case_when(
+      overall_mean >= 0.75 ~ "A",
+      overall_mean >= 0.50 ~ "B",
+      overall_mean >= 0.25 ~ "C",
+      TRUE                 ~ "D"
+    ), levels = c("A", "B", "C", "D"))
+  )
 
 
 p_v5 <- ggplot(v5_data, aes(x = year, y = value)) +
@@ -311,8 +326,7 @@ p_v5 <- ggplot(v5_data, aes(x = year, y = value)) +
   # Pooled-mean reference
   geom_hline(
     data      = mean_v5,
-    aes(yintercept = overall_mean),
-    color     = "grey65",
+    aes(yintercept = overall_mean, color = grp),
     linetype  = "dashed",
     linewidth = 0.35
   ) +
