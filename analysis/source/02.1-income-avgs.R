@@ -59,6 +59,11 @@ income_colors <- c(
   "Low income"           = "#D94801"
 )
 
+# Group labels (defined early for reuse across all visualizations) ----
+
+grp_labels <- c("A" = "A: Extensive", "B" = "B: Significant",
+                "C" = "C: Medium",    "D" = "D: Low")
+
 # grp lookup for boxplot (A–D bands)
 grp_lookup <- gtmi_data |>
   filter(year == 2025) |>
@@ -171,7 +176,7 @@ boxplot_data <- gtmi_panel |>
   mutate(
     year         = factor(year),
     income_group = factor(income_group, levels = income_levels),
-    grp          = factor(grp, levels = c("A", "B", "C", "D"))
+    grp          = factor(grp, levels = c("A", "B", "C", "D"), labels = grp_labels, exclude = NA)
   )
 
 output_dir_box <- "analysis/figs/boxplot"
@@ -193,12 +198,12 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
     dplyr::summarise(year_median = median(value, na.rm = TRUE), .groups = "drop") |>
     dplyr::mutate(
       grp = dplyr::case_when(
-        year_median >= 0.75 ~ "A",
-        year_median >= 0.50 ~ "B",
-        year_median >= 0.25 ~ "C",
-        TRUE                ~ "D"
+        year_median >= 0.75 ~ "A: Extensive",
+        year_median >= 0.50 ~ "B: Significant",
+        year_median >= 0.25 ~ "C: Medium",
+        TRUE                ~ "D: Low"
       ),
-      grp = factor(grp, levels = c("A", "B", "C", "D"))
+      grp = factor(grp, levels = c("A: Extensive", "B: Significant", "C: Medium", "D: Low"))
     )
 
   p <- ggplot(plot_data, aes(x = year, y = value)) +
@@ -243,7 +248,15 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
       fill   = NA,
       stroke = 1.8
     ) +
-    scale_color_manual(values = grp_colors, name = "GTMI Group") +
+    scale_color_manual(
+      values = c(
+        "A: Extensive" = "#4DAF4A",
+        "B: Significant" = "#377EB8",
+        "C: Medium" = "#FF7F00",
+        "D: Low" = "#E41A1C"
+      ),
+      name = "GTMI Group"
+    ) +
     scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
     facet_wrap(~ income_group, nrow = 1) +
     labs(
@@ -254,8 +267,8 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
       caption  = paste0(
         "Diamond outline = year median (coloured by GTMI group). ",
         "Dashed line = overall income group mean (all years pooled).\n",
-        "Background bands: A \u22650.75 (green), B 0.50\u20130.75 (blue), ",
-        "C 0.25\u20130.50 (orange), D <0.25 (red)."
+        "Background bands: A ≥0.75 (green), B 0.50–0.75 (blue), ",
+        "C 0.25–0.50 (orange), D <0.25 (red)."
       )
     ) +
     theme(
@@ -267,7 +280,7 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
     )
 
   ggplot2::ggsave(
-    filename = file.path(output_dir_box, glue("abcd_boxplot_{ind}_income.png")),
+    filename = file.path(output_dir_box, glue("final_v_abcd_boxplot_{ind}_income.png")),
     plot     = p,
     width    = 12, height = 6, dpi = 300, bg = "white"
   )

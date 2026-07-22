@@ -140,12 +140,14 @@ top_movers <- top_movers |>
 axis_lookup <- setNames(str_wrap(top_movers$short_label, width = 25), top_movers$y_key)
 
 # 3-Plotting: colors, labels, axis padding ---------------------------------
+
+grp_labels <- c("A" = "A: Extensive", "B" = "B: Significant",
+                "C" = "C: Medium",    "D" = "D: Low")
+
 pillar_colors <- c(cgsi = "#4472C4", dcei = "#70AD47", gtei = "#BF9000", psdi = "#C0325B")
 pillar_labels <- c(cgsi = "CGSI",    dcei = "DCEI",    gtei = "GTEI",    psdi = "PSDI")
-grp_labels <- c("A" = "A: Extensive", "B" = "B: Significant",
-                 "C" = "C: Medium",   "D" = "D: Low")
 
-# Labels redability
+# Labels readability
 rng <- range(top_movers$pp_change, na.rm = TRUE)
 pad <- diff(rng) * 0.18
 

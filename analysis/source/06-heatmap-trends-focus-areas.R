@@ -37,6 +37,11 @@ ggsave <- partial(
   height = 8
 )
 
+# Group labels (defined early for reuse across all visualizations) ----
+
+grp_labels <- c("A" = "A: Extensive", "B" = "B: Significant",
+                "C" = "C: Medium",    "D" = "D: Low")
+
 
 # data-load ----------------------------------------------------------------
 
@@ -136,9 +141,8 @@ heatmap_panel <- raw_panel |>
   left_join(grp_lookup,    by = "country_code") |>
   left_join(country_class, by = "country_code") |>
   filter(!is.na(region), !is.na(grp), !is.na(income_group)) |>
-  # after
   mutate(
-    grp          = factor(grp, levels = c("A", "B", "C", "D")),
+    grp = factor(grp, levels = c("A", "B", "C", "D"), labels = grp_labels),
     income_group = factor(
       income_group,
       levels = c("High income", "Upper middle income", "Lower middle income", "Low income")
@@ -294,13 +298,13 @@ purrr::walk(color_versions, function(col_by) {
 
   p_level <- make_heatmap(heatmap_panel, col_by, type = "level", year_val = 2025)
   ggsave(
-    file.path(out_dir, glue::glue("fa_heatmap_level_{col_by}_2025.png")),
+    file.path(out_dir, glue::glue("v4_heatmap_level_{col_by}_2025.png")),
     plot = p_level
   )
 
   p_delta <- make_heatmap(heatmap_panel, col_by, type = "delta")
   ggsave(
-    file.path(out_dir, glue::glue("fa_heatmap_delta_{col_by}_2022_2025.png")),
+    file.path(out_dir, glue::glue("v4_heatmap_delta_{col_by}_2022_2025.png")),
     plot = p_delta
   )
 })
