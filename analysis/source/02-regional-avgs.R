@@ -12,11 +12,11 @@ library(here)
 
 devtools::load_all()
 
-ggsave_v3 <- partial(
+ggsave_v5f <- partial(
   ggplot2::ggsave,
   bg = "white",
-  width = 20,
-  height = 6
+  width = 14,
+  height = 4
 )
 
 
@@ -61,6 +61,9 @@ grp_labels <- c(
   "C" = "C: Medium",
   "D" = "D: Low"
 )
+
+# Legend order: Extensive to Low (A → B → C → D)
+grp_legend_order <- c("A: Extensive", "B: Significant", "C: Medium", "D: Low")
 
 income_levels <- c(
   "High income",
@@ -128,10 +131,10 @@ boxplot_data <- gtmi_panel |>
   mutate(year = factor(year))
 
 
-# ── v3: one plot per indicator, faceted by region or income_group ─────────────
+# ── v5f: one plot per indicator, faceted by region or income_group ─────────────
 
-output_dir_v3 <- here("analysis", "figs", "boxplot", "v3")
-dir.create(output_dir_v3, recursive = TRUE, showWarnings = FALSE)
+output_dir_v5f <- here("analysis", "figs", "boxplot", "v5f")
+dir.create(output_dir_v5f, recursive = TRUE, showWarnings = FALSE)
 
 build_median <- function(df, facet_var) {
   df |>
@@ -169,7 +172,7 @@ build_facet_order <- function(df, facet_var) {
     pull(!!sym(facet_var))
 }
 
-build_v3_plot <- function(plot_data, facet_var, facet_nrow = 1, ind_label) {
+build_v5f_plot <- function(plot_data, facet_var, facet_nrow = 1, ind_label) {
 
   plot_data <- plot_data |>
     filter(!is.na(.data[[facet_var]]))
@@ -224,6 +227,7 @@ build_v3_plot <- function(plot_data, facet_var, facet_nrow = 1, ind_label) {
     scale_color_manual(
       values = grp_colors,
       labels = grp_labels,
+      breaks = c("A", "B", "C", "D"),
       name   = "GTMI Group"
     ) +
     scale_y_continuous(
@@ -243,16 +247,16 @@ build_v3_plot <- function(plot_data, facet_var, facet_nrow = 1, ind_label) {
     theme(
       legend.position    = "top",
       legend.key.size    = unit(0.4, "cm"),
-      legend.text        = element_text(size = 8),
-      strip.text         = element_text(size = 8.5, face = "bold"),
+      legend.text        = element_text(size = 14),
+      strip.text         = element_text(size = 10, face = "bold"),
       strip.background   = element_blank(),
-      axis.text.x        = element_text(size = 8),
+      axis.text.x        = element_text(size = 12),
       panel.grid.minor   = element_blank(),
       panel.grid.major.x = element_blank(),
       panel.border       = element_blank(),
       panel.spacing      = unit(0.5, "lines"),
-      plot.title         = element_text(face = "bold", size = 13),
-      plot.subtitle      = element_text(size = 9, color = "grey40",
+      plot.title         = element_text(face = "bold", size = 10),
+      plot.subtitle      = element_text(size = 3, color = "grey40",
                                         margin = margin(b = 4))
     )
 }
@@ -262,13 +266,13 @@ purrr::walk(unique(boxplot_data$indicator), function(ind) {
   plot_data <- boxplot_data |> filter(indicator == ind)
   ind_label <- unique(plot_data$indicator_name)
 
-  p_region <- build_v3_plot(plot_data, "region",       facet_nrow = 1, ind_label)
-  p_income <- build_v3_plot(plot_data, "income_group", facet_nrow = 1, ind_label)
+  p_region <- build_v5f_plot(plot_data, "region",       facet_nrow = 1, ind_label)
+  p_income <- build_v5f_plot(plot_data, "income_group", facet_nrow = 1, ind_label)
 
-  ggsave_v3(file.path(output_dir_v3, glue::glue("v3_{ind}_region.png")),
+  ggsave_v5f(file.path(output_dir_v5f, glue::glue("v5f_{ind}_region.png")),
          plot = p_region)
 
-  ggsave_v3(file.path(output_dir_v3, glue::glue("v3_{ind}_income_group.png")),
+  ggsave_v5f(file.path(output_dir_v5f, glue::glue("v5f_{ind}_income_group.png")),
          plot = p_income)
 })
 
@@ -366,6 +370,7 @@ p_v5 <- ggplot(v5_data, aes(x = year, y = value)) +
   scale_color_manual(
     values = grp_colors,
     labels = grp_labels,
+    breaks = c("A", "B", "C", "D"),
     name   = "GTMI Group (2025)"
   ) +
   scale_y_continuous(
@@ -413,7 +418,7 @@ p_v5 <- ggplot(v5_data, aes(x = year, y = value)) +
 
 ggsave_v5(
   file.path(output_dir_v5, "v5_focus_areas.png"),
-  plot   = p_v5,
+  plot   = p_v5
 )
 
 message("Saved -> ", file.path(output_dir_v5, "v5_focus_areas.png"))

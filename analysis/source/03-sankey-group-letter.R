@@ -127,7 +127,7 @@ sankey_by_indicator <- gtmi_long |>
     values_from = group
   ) |>
   drop_na(y2020, y2022, y2025) |>
-  group_split(indicator)
+  group_split(indicator, .keep = TRUE)
 
 # Name the list elements by indicator
 names(sankey_by_indicator) <- map_chr(sankey_by_indicator, ~unique(.x$indicator))
@@ -135,12 +135,12 @@ names(sankey_by_indicator) <- map_chr(sankey_by_indicator, ~unique(.x$indicator)
 # Transform each indicator's data into Sankey format
 sankey_by_indicator <- imap(sankey_by_indicator, function(df, ind) {
   ind_name <- unique(df$indicator_name)
+  
   df |>
     ggsankey::make_long(y2020, y2022, y2025) |>
     mutate(
-      indicator_name = ind_name,
-      x      = recode(x,      "y2020" = "2020", "y2022" = "2022", "y2025" = "2025"),
-      next_x = recode(next_x, "y2020" = "2020", "y2022" = "2022", "y2025" = "2025")
+      indicator = ind,
+      indicator_name = ind_name
     )
 })
 
@@ -358,3 +358,224 @@ ggsave(
     "digital_divide_widening_2020_2025_v2.png"
   )
 )
+
+
+
+
+# TRANSITION ANALYSIS: 16 STACKED BARS (2020→2022 vs 2022→2025) -----------
+
+# Prepare transition data for all group-year pairs
+from_year <- 2020
+to_year <- 2025
+
+transition_data <- gtmi_long |>
+  filter(
+    indicator == "gtmi",
+    year %in% c(2020, 2022, 2025),
+    !is.na(group)
+  ) |>
+  select(country_code, year, group) |>
+  pivot_wider(
+    id_cols = country_code,
+    names_from = year,
+    values_from = group,
+    names_prefix = "y"
+  ) |>
+  left_join(
+    country_class |>
+      select(country_code, income_group),
+    by = "country_code"
+  ) |>
+  filter(!is.na(income_group)) |>
+  mutate(
+    income_group = factor(income_group, levels = income_levels)
+  )
+
+# Create two transitions: 2020→2022 and 2022→2025
+transition_summary <- bind_rows(
+  # 2020 → 2022 transitions
+  transition_data |>
+    drop_na(y2020, y2022) |>
+    count(from_group = y2020, to_group = y2022, income_group) |>
+    mutate(period = "2020→2022"),
+  # 2022 → 2025 transitions
+  transition_data |>
+    drop_na(y2022, y2025) |>
+    count(from_group = y2022, to_group = y2025, income_group) |>
+    mutate(period = "2022→2025")
+) |>
+  mutate(
+    from_group = factor(from_group, levels = c("A", "B", "C", "D")),
+    to_group = factor(to_group, levels = c("A", "B", "C", "D")),
+    period = factor(period, levels = c("2020→2022", "2022→2025"))
+  )
+
+# Create faceted plot: 4 starting groups × 2 periods = 8 facets
+# Each facet shows where countries from that group moved to
+p_transitions <- ggplot(
+  transition_summary,
+  aes(
+    x = period,
+    y = n,
+    fill = factor(income_group, levels = income_levels)
+  )
+) +
+  geom_col(
+    width = 0.65,
+    color = "white",
+    linewidth = 0.5
+  ) +
+  geom_text(
+    aes(label = n),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    fontface = "bold",
+    size = 3.5
+  ) +
+  facet_grid(
+    from_group ~ to_group,
+    labeller = labeller(
+      from_group = c(
+        "A" = "Starting: A (Extensive)",
+        "B" = "Starting: B (Significant)",
+        "C" = "Starting: C (Medium)",
+        "D" = "Starting: D (Low)"
+      ),
+      to_group = c(
+        "A" = "→ Moved to A",
+        "B" = "→ Moved to B",
+        "C" = "→ Moved to C",
+        "D" = "→ Moved to D"
+      )
+    )
+  ) +
+  scale_fill_manual(
+    values = income_colors,
+    breaks = income_levels,
+    name = "Income group"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .05))
+  ) +
+  labs(
+    title = "GTMI Group Transitions by Income Level",
+    subtitle = "Where countries moved from 2020→2022 and 2022→2025",
+    x = "Period",
+    y = "Number of Countries",
+    fill = "Income group"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.text = element_text(size = 10),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "gray90", linewidth = 0.3),
+    strip.text = element_text(face = "bold", size = 10),
+    axis.title.x = element_text(face = "bold", size = 11),
+    axis.title.y = element_text(face = "bold", size = 11),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11),
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 20)
+  )
+
+ggplot2::ggsave(
+  filename = here::here("analysis", "figs", "sankey", "income", "transitions_matrix_16bars.png")
+)
+
+
+
+# ALTERNATIVE: Absolute counts per group per year, stacked by income ----
+
+
+
+group_counts_by_year <- gtmi_long |>
+  filter(
+    indicator == "gtmi",
+    year %in% c(2020, 2022, 2025),
+    !is.na(group)
+  ) |>
+  select(country_code, year, group) |>
+  distinct() |>
+  left_join(
+    country_class |>
+      select(country_code, income_group),
+    by = "country_code"
+  ) |>
+  filter(!is.na(income_group)) |>
+  mutate(
+    year = factor(year, levels = c(2020, 2022, 2025)),
+    group = factor(group, levels = c("A", "B", "C", "D")),
+    income_group = factor(income_group, levels = income_levels)
+  ) |>
+  count(year, group, income_group, name = "n")
+
+p_transitions_linear <- ggplot(
+  group_counts_by_year,
+  aes(
+    x = group,
+    y = n,
+    fill = income_group
+  )
+) +
+  geom_col(
+    width = 0.65,
+    color = "white",
+    linewidth = 0.5
+  ) +
+  geom_text(
+    aes(label = n),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    fontface = "bold",
+    size = 3.5
+  ) +
+  scale_fill_manual(
+    values = income_colors,
+    breaks = income_levels,
+    name = "Income group"
+  ) +
+  scale_x_discrete(
+    labels = grp_labels
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, .05))
+  ) +
+  facet_wrap(~year, nrow = 1) +
+  labs(
+    title = "GTMI Maturity Level by Income Group",
+    subtitle = "Number of countries in each group, 2020 / 2022 / 2025",
+    x = "GTMI Group",
+    y = "Number of Countries",
+    fill = "Income group"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.text = element_text(size = 10),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "gray90", linewidth = 0.3),
+    strip.text = element_text(face = "bold", size = 10),
+    axis.title.x = element_text(face = "bold", size = 11),
+    axis.title.y = element_text(face = "bold", size = 11),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11),
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 20)
+  )
+
+
+ggsave(
+  here::here(
+    "analysis",
+    "figs",
+    "sankey",
+    "income", "group_counts_by_year_2020_2022_2025.png")
+)
+
