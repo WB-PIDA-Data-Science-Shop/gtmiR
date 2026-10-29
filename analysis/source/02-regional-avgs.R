@@ -130,6 +130,40 @@ boxplot_data <- gtmi_panel |>
   left_join(indicator_labels, by = "indicator") |>
   mutate(year = factor(year))
 
+###
+# Share of low income adn middle income countries that are above their respective income group median in 2025
+# Per-country classification: green = above income-group median, red = at/below
+# Per-country classification: green = above income-group median, red = at/below
+income_median_status <- gtmi_panel |>
+  filter(
+    year %in% c(2020, 2022, 2025),
+    income_group %in% c("Low income", "Lower middle income", "Upper middle income"),
+    !is.na(gtmi)
+  ) |>
+  group_by(income_group, year) |>
+  mutate(
+    group_median = median(gtmi, na.rm = TRUE),
+    status       = if_else(gtmi > group_median, "green", "red")
+  ) |>
+  ungroup() |>
+  mutate(
+    income_group = factor(income_group, levels = income_levels)
+  ) |>
+  select(country_code, income_group, year, gtmi, group_median, status) |>
+  arrange(income_group, year, desc(gtmi))
+
+# Aggregate share of green (above-median) vs red (at/below-median) countries
+income_above_median_by_year <- income_median_status |>
+  group_by(income_group, year) |>
+  summarise(
+    n_countries   = n(),
+    n_green       = sum(status == "green"),
+    n_red         = sum(status == "red"),
+    share_green   = n_green / n_countries,
+    share_red     = n_red / n_countries,
+    .groups = "drop"
+  ) |>
+  arrange(income_group, year)
 
 # ── v5f: one plot per indicator, faceted by region or income_group ─────────────
 
