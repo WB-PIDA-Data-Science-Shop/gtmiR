@@ -164,7 +164,7 @@ prep_heatmap_data <- function(data, group_by_col, type, year_val) {
       tidyr::pivot_longer(all_of(grp_vars), names_to = "indicator_group", values_to = "value") |>
       dplyr::mutate(
         label           = scales::number(value, accuracy = 0.01),
-        indicator_group = factor(indicator_group, levels = grp_vars, labels = unname(group_labels)),
+        indicator_group = factor(indicator_group, levels = rev(grp_vars), labels = rev(unname(group_labels))),
         # White text on dark fills, near-black on pale fills
         text_col        = dplyr::if_else(value > 0.55, "white", "grey15")
       )
@@ -178,7 +178,7 @@ prep_heatmap_data <- function(data, group_by_col, type, year_val) {
       dplyr::mutate(
         value           = (yr_2025 - yr_2022) * 100,
         label           = scales::number(value, accuracy = 0.1, suffix = " pp"),
-        indicator_group = factor(indicator_group, levels = grp_vars, labels = unname(group_labels))
+        indicator_group = factor(indicator_group, levels = rev(grp_vars), labels = rev(unname(group_labels)))
       )
 
     max_abs <- max(abs(out$value), na.rm = TRUE)
@@ -298,13 +298,13 @@ purrr::walk(color_versions, function(col_by) {
 
   p_level <- make_heatmap(heatmap_panel, col_by, type = "level", year_val = 2025)
   ggsave(
-    file.path(out_dir, glue::glue("v4_heatmap_level_{col_by}_2025.png")),
+    file.path(out_dir, glue::glue("finalv5_heatmap_level_{col_by}_2025.png")),
     plot = p_level
   )
 
   p_delta <- make_heatmap(heatmap_panel, col_by, type = "delta")
   ggsave(
-    file.path(out_dir, glue::glue("v4_heatmap_delta_{col_by}_2022_2025.png")),
+    file.path(out_dir, glue::glue("finalv5_heatmap_delta_{col_by}_2022_2025.png")),
     plot = p_delta
   )
 })
