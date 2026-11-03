@@ -514,6 +514,25 @@ readr::write_csv(matched, file.path(output_verify_dir, "recon_matched_2025.csv")
 readr::write_csv(unexpected, file.path(output_verify_dir, "recon_unexpected_generated_2025.csv"))
 readr::write_csv(missing, file.path(output_verify_dir, "recon_missing_from_generated_2025.csv"))
 
+library(testthat)
+
+# Sanity check: compare country codes from generated vs authoritative lists
+test_that(
+  "All country codes contained in GTMI are in the WB country class",{
+    expect_equal(
+      nrow(
+        gtmi_label |>
+          anti_join(country_class, by = "country_code") |>
+          as.data.frame()
+      ),
+      0
+    )
+  }
+)
+
+
+
+
 
 
 # outperform countries ---------------------------------------------------

@@ -42,12 +42,8 @@ metadata <- gtmi_indicator_metadata
 # 1. data-prep -----------------------------------------------------------
 ## a) Baseline adoption-level group ("grp": A/B/C/D) per country
 ## Countries are tracked longitudinally against their 2022 (baseline) tier,
-## in retrospective of the 2025 survey wave. This is important because some countries
-## move *between* adoption-level groups over time, but the "movers" analysis
-## is tracked by the baseline tier, not the final tier. For example, a country that
-## was in group A in 2022 but moved to group B in 2025 is still counted as a "mover" in the group A panel, not group B. 
-# This ensures that the analysis reflects the changes relative to the starting point, 
-# rather than the ending point.
+## in retrospective of the 2025 survey wave. countries are grouped by their 2025 band. 
+# That answers a different question: how today's A/B/C/D countries got where they are. Countries that moved up then make the top bands look like they improved more.
 # NOTE gtmi_data contains a few corrupted 2025 rows (grp values
 ## like "42"/"80" and a missing country_code) -- these are dropped by
 ## keeping only valid A-D codes.
